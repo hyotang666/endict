@@ -2,9 +2,11 @@
 (in-package :asdf)
 (defsystem "endict"
   :version
-  "0.0.0"
+  "0.2.0"
   :depends-on
-  nil
+  (
+   "uiop"       ; Utilities, implicitly depends on via asdf.
+   )
   :pathname
   "src/"
   :components
