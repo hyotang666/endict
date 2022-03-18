@@ -77,7 +77,8 @@
   2. The SECTION which lacks secondary section part.
 NOTE: First value may NIL and warned if such line does not exist."
   (loop :for (content . rest) :on (cdr section) ; To ignore name part.
-        :if (equal "" content)
+        :if (or (equal "" content)
+                (uiop:string-prefix-p "(a)" (string-left-trim " " content)))
           :do (loop-finish)
         :collect content :into results
         :finally (return
