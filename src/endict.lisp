@@ -66,5 +66,10 @@
            (write-string (car (name-representations this)) output)))
         (t (format output "~{~A~^; ~}" (name-representations this)))))
 
-(defun canonicalize-name (name)
-  (make-name :representations (uiop:split-string name :separator "; ")))
+(defun name (section)
+  "Return two values.
+  1. A NAME object.
+  2. The SECTION which lacks name part."
+  (values (make-name :representations (uiop:split-string (car section)
+                                                         :separator "; "))
+          (cdr section)))
