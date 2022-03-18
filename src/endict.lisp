@@ -45,7 +45,9 @@
                  (equal "" (car acc)))
             (return (values (cons name (nreverse acc)) line))
             (push line acc))
-        (if (every (lambda (c) (or (upper-case-p c) (char= #\Space c))) line)
+        (if (and (not (equal "" line))
+                 (every (lambda (c) (or (upper-case-p c) (char= #\Space c)))
+                        line))
             (setq name (format nil "~A ~A" name line))
             (push line acc)))))
 
