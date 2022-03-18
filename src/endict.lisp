@@ -66,10 +66,23 @@
            (write-string (car (name-representations this)) output)))
         (t (format output "~{~A~^; ~}" (name-representations this)))))
 
-(defun name (section)
-  "Return two values.
-  1. A NAME object.
-  2. The SECTION which lacks name part."
-  (values (make-name :representations (uiop:split-string (car section)
-                                                         :separator "; "))
-          (cdr section)))
+(defun name (name)
+  (make-name :representations (uiop:split-string name :separator "; ")))
+
+;;;; SECONDARY-SECTION
+
+(defun secondary-section (section)
+  "Accept SECTION. Return two values.
+  1. A line which should have pronouce, category and Etym.
+  2. The SECTION which lacks secondary section part.
+NOTE: First value may NIL and warned if such line does not exist."
+  (loop :for (content . rest) :on (cdr section) ; To ignore name part.
+        :if (equal "" content)
+          :do (loop-finish)
+        :collect content :into results
+        :finally (return
+                  (if results
+                      (values (format nil "~{~A~^ ~}" results) rest)
+                      (values (warn "Missing secondary section for ~S"
+                                    (car section))
+                              rest)))))
