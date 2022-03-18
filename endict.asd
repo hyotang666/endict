@@ -2,10 +2,11 @@
 (in-package :asdf)
 (defsystem "endict"
   :version
-  "0.5.0"
+  "0.6.0"
   :depends-on
   (
    "uiop"       ; Utilities, implicitly depends on via asdf.
+   "cl-ppcre"   ; Regular expression.
    )
   :pathname
   "src/"

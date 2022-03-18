@@ -86,3 +86,34 @@ NOTE: First value may NIL and warned if such line does not exist."
                       (values (warn "Missing secondary section for ~S"
                                     (car section))
                               rest)))))
+
+;;;; ETYM
+
+(defstruct etym (defs (error "DEFS is required.") :type list #|of string|#))
+
+(defmethod print-object ((this etym) output)
+  (cond (*print-readably* (call-next-method))
+        (*print-escape*
+         (print-unreadable-object (this output :type t :identity t)))
+        (t
+         (loop :for (def . rest) :on (etym-defs this)
+               :do (pprint-logical-block (output nil :prefix "Etym: ")
+                     (write-string def output)
+                     (when rest
+                       (pprint-newline :mandatory output)))))))
+
+(defun etym (secondary-section)
+  "Return two values.
+  1. An ETYM object if exists otherwise NIL.
+  2. The SECONDARY-SECTION string which lacks etym part."
+  (let ((position (search "Etym:" secondary-section)))
+    (if position
+        (values (make-etym :defs (loop :for content
+                                            :in (ppcre:split "Etym:"
+                                                             secondary-section
+                                                             :start position)
+                                       :for trim = (string-trim " " content)
+                                       :unless (equal "" trim)
+                                         :collect trim))
+                (string-right-trim " " (subseq secondary-section 0 position)))
+        (values nil secondary-section))))
