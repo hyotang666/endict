@@ -48,3 +48,19 @@
         (if (every (lambda (c) (or (upper-case-p c) (char= #\Space c))) line)
             (setq name (format nil "~A ~A" name line))
             (push line acc)))))
+
+;;;; NAME
+
+(defstruct name
+  (representations (error "REPRESENTATIONS is required.") :type list
+                   #|of string|#))
+
+(defmethod print-object ((this name) output)
+  (cond (*print-readably* (call-next-method))
+        (*print-escape*
+         (print-unreadable-object (this output :type nil :identity nil)
+           (write-string (car (name-representations this)) output)))
+        (t (format output "~{~A~^; ~}" (name-representations this)))))
+
+(defun canonicalize-name (name)
+  (make-name :representations (uiop:split-string name :separator "; ")))
