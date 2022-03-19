@@ -78,7 +78,9 @@
 NOTE: First value may NIL and warned if such line does not exist."
   (loop :for (content . rest) :on (cdr section) ; To ignore name part.
         :if (or (equal "" content)
-                (uiop:string-prefix-p "(a)" (string-left-trim " " content)))
+                (and (uiop:string-prefix-p "(a)"
+                                           (string-left-trim " " content))
+                     (setq rest (cons content rest))))
           :do (loop-finish)
         :collect content :into results
         :finally (return
