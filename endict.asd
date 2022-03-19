@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "endict"
   :version
-  "0.9.0"
+  "0.10.0"
   :depends-on
   (
    "uiop"       ; Utilities, implicitly depends on via asdf.

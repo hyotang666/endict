@@ -151,3 +151,38 @@ NOTE: First value may NIL and warned if such line does not exist."
         :when category
           :collect category))
 
+;;;; PRONOUNCE
+
+(defstruct pronounce
+  (defs (error "DEFS is required.") :type list #|of string|#))
+
+(defmethod print-object ((this pronounce) output)
+  (cond (*print-readably* (call-next-method))
+        (*print-escape*
+         (print-unreadable-object (this output)
+           (write (car (pronounce-defs this)) :stream output :escape t)))
+        (t (format output "~{~A~^ ~}" (pronounce-defs this)))))
+
+(defun pronounce (pronounce-part)
+  "Return two values.
+  1. PRONOUNCE object.
+  2. List of categories."
+  (let ((split (ppcre:split ", ?" pronounce-part)))
+    (case (length split)
+      (0 (error "WTF! pronounce-part: ~S" pronounce-part))
+      (1
+       (values (make-pronounce :defs (list (string-trim "." (car split))))
+               nil))
+      (2
+       (destructuring-bind
+           (first second)
+           split
+         (values (make-pronounce :defs (list first)) (parse-category second))))
+      ;; For simplicity's sake, we use only first pronounce and last category.
+      (otherwise
+       (values (make-pronounce :defs (list (car split)))
+               (loop :for elt :in (reverse (cdr split))
+                     :for category := (parse-category elt)
+                     :when category
+                       :return category))))))
+
