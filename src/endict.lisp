@@ -131,3 +131,23 @@ NOTE: First value may NIL and warned if such line does not exist."
                                                   canonicalized)))))
     (assert (not (equal "" result)))
     result))
+
+(unless (boundp '+category+)
+  (eval-when (:compile-toplevel :load-toplevel :execute)
+    ;; To muffle compiler claims as 'undefined variable:'.
+    (defconstant +category+
+      '(("n." . :noun) ("n.." . :noun) ("n. pl." . :plural) ("n.pl." . :plural)
+        ("pl." . :plural) ("n. sing." . :single) ("n.sing." . :single)
+        ("a." . :article) ("a" . :article) ("v. t." . :verb) ("v.t." . :verb)
+        ("v.t" . :verb) ("v. i." . :varb) ("v.i." . :varb) ("v." . :verb)
+        ("adv." . :adverb) ("i." . :verb) ("obs." . :obs)
+        ("interj." . :interjection) ("prep." . :preposition)
+        ("conj." . :conjunction) ("p. p." . :past-participle)
+        ("obs." . :obs)))))
+
+(defun parse-category (string)
+  (loop :for token :in (ppcre:split " ?& ?" string)
+        :for category = (cdr (assoc token +category+ :test #'equal))
+        :when category
+          :collect category))
+
