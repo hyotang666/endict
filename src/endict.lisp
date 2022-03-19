@@ -72,8 +72,7 @@
 NOTE: First value may NIL and warned if such line does not exist."
   (loop :for (content . rest) :of-type (simple-string . list) :on (cdr section)
         :if (or (equal "" content)
-                (and (uiop:string-prefix-p "(a)"
-                                           (string-left-trim " " content))
+                (and (ppcre:scan "^ *\\(a\\)" content)
                      (setq rest (cons content rest))))
           :do (loop-finish)
         :collect content :into results
