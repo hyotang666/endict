@@ -116,7 +116,11 @@ NOTE: First value may NIL and warned if such line does not exist."
                                        :for trim = (string-trim " " content)
                                        :unless (equal "" trim)
                                          :collect trim))
-                (string-right-trim " " (subseq secondary-section 0 position)))
+                (subseq secondary-section 0
+                        (or (position #\Space secondary-section
+                                      :from-end t
+                                      :end position)
+                            position)))
         (values nil secondary-section))))
 
 (defun discard-option (but-etym)

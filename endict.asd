@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "endict"
   :version
-  "0.14.7"
+  "0.14.8"
   :description "S-Expression version of Webster's Unabridged Dictionary."
   :author "SATO Shinichi"
   :license "the Project Gutenberg License"
