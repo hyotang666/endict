@@ -122,9 +122,9 @@ NOTE: First value may NIL and warned if such line does not exist."
     (assert (not (equal "" result)))
     result))
 
-(unless (boundp '+category+)
-  (eval-when (:compile-toplevel :load-toplevel :execute)
-    ;; To muffle compiler claims as 'undefined variable:'.
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; To muffle compiler claims as 'undefined variable:'.
+  (unless (boundp '+category+)
     (defconstant +category+
       '(("n." . :noun) ("n.." . :noun) ("n. pl." . :plural) ("n.pl." . :plural)
         ("pl." . :plural) ("n. sing." . :single) ("n.sing." . :single)
