@@ -55,19 +55,7 @@
 
 ;;;; NAME
 
-(defstruct name
-  (representations (error "REPRESENTATIONS is required.") :type list
-                   #|of string|#))
-
-(defmethod print-object ((this name) output)
-  (cond (*print-readably* (call-next-method))
-        (*print-escape*
-         (print-unreadable-object (this output :type nil :identity nil)
-           (write-string (car (name-representations this)) output)))
-        (t (format output "~{~A~^; ~}" (name-representations this)))))
-
-(defun name (name)
-  (make-name :representations (uiop:split-string name :separator "; ")))
+(defun name (name) (uiop:split-string name :separator "; "))
 
 ;;;; SECONDARY-SECTION
 
@@ -318,7 +306,7 @@ NOTE: First value may NIL and warned if such line does not exist."
 ;;;; SECTION
 
 (defstruct section
-  (name (error "NAME is required.") :type name)
+  (name (error "NAME is required.") :type list #|of string|#)
   (pronounce (error "PRONOUNCE is required.") :type (or null pronounce))
   (plural nil :type (or plural single null))
   (categories nil :type list #|of category|#)
