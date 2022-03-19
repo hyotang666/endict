@@ -338,3 +338,19 @@ NOTE: First value may NIL and warned if such line does not exist."
                       :categories category
                       :etym etym
                       :definitions (parse-defn rest))))))
+
+;;;; LOAD.
+
+(defun load-dictionary.txt ()
+  (with-open-file (in (truename
+                        (uiop:subpathname
+                          (asdf:system-source-directory
+                            (asdf:find-system :endict))
+                          "dictionary.txt")))
+    (skip-header in)
+    (loop :with section
+          :with next-name := (slurp-line in)
+          :do (setf (values section next-name) (section next-name in))
+          :collect (parse-section section)
+          :unless next-name
+            :do (loop-finish))))
