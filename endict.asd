@@ -3,6 +3,9 @@
 (defsystem "endict"
   :version
   "0.14.7"
+  :description "S-Expression version of Webster's Unabridged Dictionary."
+  :author "SATO Shinichi"
+  :license "the Project Gutenberg License"
   :depends-on
   (
    "uiop"       ; Utilities, implicitly depends on via asdf.
