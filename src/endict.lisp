@@ -171,7 +171,7 @@ NOTE: First value may NIL and warned if such line does not exist."
   2. List of categories."
   (let ((split (ppcre:split ", ?" pronounce-part)))
     (case (length split)
-      (0 (error "WTF! pronounce-part: ~S" pronounce-part))
+      (0 (values nil nil))
       (1
        (values (make-pronounce :defs (list (string-trim "." (car split))))
                nil))
