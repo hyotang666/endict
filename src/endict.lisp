@@ -6,6 +6,8 @@
 
 (in-package :endict)
 
+(declaim (optimize speed))
+
 (defun skip-header (input)
   (loop :for line := (read-line input nil nil)
         :while line
@@ -16,7 +18,9 @@
 (defun slurp-line (input)
   (let ((name (read-line input nil nil)))
     (when name
-      (string-right-trim #.(string #\Return) name))))
+      (locally
+       (declare (simple-string name))
+       (string-right-trim #.(string #\Return) name)))))
 
 (defun section (name input)
   "Slurp the section of the NAME from INPUT. Return two values.
@@ -26,6 +30,7 @@
        acc
        (ignore '("M." "P." "X.")))
       ((null line) (values (cons name (nreverse acc)) nil))
+    (declare (type (simple-array character (*)) line name))
     (if acc
         (unless (member line ignore :test #'equal)
           (if (and ;; The name must have one alphabet at least.
@@ -56,7 +61,7 @@
 ;;;; NAME
 
 (defun name (name)
-  (delete "" (uiop:split-string name :separator "; ") :test #'equal))
+  (delete "" (the list (uiop:split-string name :separator "; ")) :test #'equal))
 
 ;;;; SECONDARY-SECTION
 
@@ -65,7 +70,7 @@
   1. A line which should have pronouce, category and Etym.
   2. The SECTION which lacks secondary section part.
 NOTE: First value may NIL and warned if such line does not exist."
-  (loop :for (content . rest) :on (cdr section) ; To ignore name part.
+  (loop :for (content . rest) :of-type (simple-string . list) :on (cdr section)
         :if (or (equal "" content)
                 (and (uiop:string-prefix-p "(a)"
                                            (string-left-trim " " content))
@@ -94,13 +99,18 @@ NOTE: First value may NIL and warned if such line does not exist."
                      (when rest
                        (pprint-newline :mandatory output)))))))
 
+(declaim
+ (ftype (function (simple-string)
+         (values (or null etym) simple-string &optional))
+        etym))
+
 (defun etym (secondary-section)
   "Return two values.
   1. An ETYM object if exists otherwise NIL.
   2. The SECONDARY-SECTION string which lacks etym part."
   (let ((position (search "Etym:" secondary-section)))
     (if position
-        (values (make-etym :defs (loop :for content
+        (values (make-etym :defs (loop :for content :of-type simple-string
                                             :in (ppcre:split "Etym:"
                                                              secondary-section
                                                              :start position)
@@ -114,7 +124,9 @@ NOTE: First value may NIL and warned if such line does not exist."
   ;; For simplicity's sake, we discard the optional part due to its chaotic format. WTF.
   ;; NOTE: This is designed to be used for the second value of ETYM.
   (let* (;; To discard garbage i.e. "(),".
-         (canonicalized (ppcre:regex-replace-all "\\(\\)," but-etym ""))
+         (canonicalized
+          (the (array character (*))
+               (ppcre:regex-replace-all "\\(\\)," but-etym "")))
          (result
           (string-right-trim " "
                              (subseq canonicalized 0
@@ -149,9 +161,9 @@ NOTE: First value may NIL and warned if such line does not exist."
   1. List of pronounces.
   2. List of categories."
   (let ((split (ppcre:split ", ?" pronounce-part)))
-    (case (length split)
+    (case (list-length split)
       (0 (values nil nil))
-      (1 (values (list (string-trim "." (car split))) nil))
+      (1 (values (list (string-trim "." (the simple-string (car split)))) nil))
       (2
        (destructuring-bind
            (first second)
@@ -174,7 +186,7 @@ NOTE: First value may NIL and warned if such line does not exist."
         (*print-escape*
          (print-unreadable-object (this output :type t)
            (write (car (plural-defs this)) :stream output :escape t)))
-        (t (format output "pl. ~{~A~^ ~}" (plural-defs this)))))
+        (t (funcall (formatter "pl. ~{~A~^ ~}") output (plural-defs this)))))
 
 (defstruct single (defs (error "DEFS is required.") :type list #|of string|#))
 
@@ -183,7 +195,7 @@ NOTE: First value may NIL and warned if such line does not exist."
         (*print-escape*
          (print-unreadable-object (this output :type t)
            (write (car (single-defs this)) :stream output :escape t)))
-        (t (format output "sing. ~{~A~^ ~}" (single-defs this)))))
+        (t (funcall (formatter "sing. ~{~A~^ ~}") output (single-defs this)))))
 
 (defun parse-pronounce-part (but-option)
   ;; NOTE: This is designed to be used for return value of DISCARD-OPTION.
@@ -193,7 +205,7 @@ NOTE: First value may NIL and warned if such line does not exist."
   3. PLURAL, SINGLE object or NIL."
   (destructuring-bind
       (main . sub)
-      (delete "" (ppcre:split "; ?" but-option) :test #'equal)
+      (delete "" (the list (ppcre:split "; ?" but-option)) :test #'equal)
     (multiple-value-call #'values
       (pronounce main)
       (when sub
@@ -202,7 +214,7 @@ NOTE: First value may NIL and warned if such line does not exist."
            (make-plural :defs (cdr (ppcre:split "\\. ?" (car sub)))))
           ((uiop:string-prefix-p "sing." (car sub))
            (make-single :defs (cdr (ppcre:split "\\. ?" (car sub)))))
-          ((search "pl." (car sub))
+          ((search "pl." (the simple-string (car sub)))
            (make-plural :defs (cdr
                                 (ppcre:split "\\. ?"
                                              (ppcre:regex-replace-all "pl\\."
@@ -229,7 +241,7 @@ NOTE: First value may NIL and warned if such line does not exist."
 
 (defmethod print-object ((this definition) output)
   (cond ((or *print-readably* *print-escape*) (call-next-method))
-        (t (format output "Defn: ~A" (definition-article this)))))
+        (t (funcall (formatter "Defn: ~A") output (definition-article this)))))
 
 (defstruct (numbering-definition (:include anonymous-definition))
   (label (error "LABEL is required.") :type (unsigned-byte 8)))
@@ -237,8 +249,8 @@ NOTE: First value may NIL and warned if such line does not exist."
 (defmethod print-object ((this numbering-definition) output)
   (cond ((or *print-readably* *print-escape*) (call-next-method))
         (t
-         (format output "~D. ~A" (numbering-definition-label this)
-                 (numbering-definition-article this)))))
+         (funcall (formatter "~D. ~A") output (numbering-definition-label this)
+                  (numbering-definition-article this)))))
 
 (defstruct (note (:include anonymous-definition)))
 
@@ -287,6 +299,10 @@ NOTE: First value may NIL and warned if such line does not exist."
                         acc))
                  (definition (cdr rest) definition (cons (car rest) article)
                              acc))))
+    (declare
+      (ftype (function ((simple-array character (*)) list list)
+              (values list &optional))
+             body))
     (rec section nil)))
 
 ;;;; SECTION
