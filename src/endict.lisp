@@ -55,7 +55,8 @@
 
 ;;;; NAME
 
-(defun name (name) (uiop:split-string name :separator "; "))
+(defun name (name)
+  (delete "" (uiop:split-string name :separator "; ") :test #'equal))
 
 ;;;; SECONDARY-SECTION
 
