@@ -126,10 +126,10 @@ NOTE: First value may NIL and warned if such line does not exist."
           (the (array character (*))
                (ppcre:regex-replace-all "\\(\\)," but-etym "")))
          (result
-          (string-right-trim " "
-                             (subseq canonicalized 0
-                                     (position-if (lambda (c) (find c "(["))
-                                                  canonicalized)))))
+          (let ((position (ppcre:scan " *[([]" canonicalized)))
+            (if position
+                (subseq canonicalized 0 position)
+                canonicalized))))
     (assert (not (equal "" result)))
     result))
 
