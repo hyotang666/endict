@@ -340,5 +340,5 @@ NOTE: First value may NIL and warned if such line does not exist."
           :with next-name := (slurp-line in)
           :do (setf (values section next-name) (section next-name in))
           :collect (parse-section section)
-          :unless next-name
-            :do (loop-finish))))
+          :while next-name)))
+
