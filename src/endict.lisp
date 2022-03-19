@@ -314,3 +314,27 @@ NOTE: First value may NIL and warned if such line does not exist."
                  (definition (cdr rest) definition (cons (car rest) article)
                              acc))))
     (rec section nil)))
+
+;;;; SECTION
+
+(defstruct section
+  (name (error "NAME is required.") :type name)
+  (pronounce (error "PRONOUNCE is required.") :type (or null pronounce))
+  (plural nil :type (or plural single null))
+  (categories nil :type list #|of category|#)
+  (etym nil :type (or null etym))
+  (definitions nil :type list))
+
+(defun parse-section (section)
+  (multiple-value-bind (secondary-section rest)
+      (secondary-section section)
+    (multiple-value-bind (etym but-etym)
+        (etym secondary-section)
+      (multiple-value-bind (pronounce category plural)
+          (pronounce but-etym)
+        (make-section :name (name (car section))
+                      :pronounce pronounce
+                      :plural plural
+                      :categories category
+                      :etym etym
+                      :definitions (parse-defn rest))))))
