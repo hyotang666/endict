@@ -214,39 +214,36 @@ NOTE: First value may NIL and warned if such line does not exist."
 
 ;;;; DEFINITION
 
-(defstruct definition (article "" :type string))
-
-(defmethod print-object ((this definition) output)
-  (cond (*print-readably* (call-next-method))
-        (*print-escape*
-         (print-unreadable-object (this output :type t :identity t)))
-        (t (format output "Defn: ~A" (definition-article this)))))
-
-(defstruct (numbering-definition (:include definition))
-  (label (error "LABEL is required.") :type (unsigned-byte 8)))
-
-(defmethod print-object ((this numbering-definition) output)
-  (cond (*print-readably* (call-next-method))
-        (*print-escape*
-         (print-unreadable-object (this output :type t :identity t)))
-        (t
-         (format output "~D. ~A" (numbering-definition-label this)
-                 (definition-article this)))))
-
-(defstruct (anonymous-definition (:include definition)))
+(defstruct anonymous-definition (article "" :type string))
 
 (defmethod print-object ((this anonymous-definition) output)
-  (cond (*print-readably* (call-next-method))
+  (cond ;; To use implementation #S() notation without the string print as #A style.
+        (*print-readably*
+         (let (*print-readably*)
+           (call-next-method)))
         (*print-escape*
          (print-unreadable-object (this output :type t :identity t)))
         (t (write-string (anonymous-definition-article this) output))))
 
-(defstruct (note (:include definition)))
+(defstruct (definition (:include anonymous-definition)))
+
+(defmethod print-object ((this definition) output)
+  (cond ((or *print-readably* *print-escape*) (call-next-method))
+        (t (format output "Defn: ~A" (definition-article this)))))
+
+(defstruct (numbering-definition (:include anonymous-definition))
+  (label (error "LABEL is required.") :type (unsigned-byte 8)))
+
+(defmethod print-object ((this numbering-definition) output)
+  (cond ((or *print-readably* *print-escape*) (call-next-method))
+        (t
+         (format output "~D. ~A" (numbering-definition-label this)
+                 (numbering-definition-article this)))))
+
+(defstruct (note (:include anonymous-definition)))
 
 (defmethod print-object ((this note) output)
-  (cond (*print-readably* (call-next-method))
-        (*print-escape*
-         (print-unreadable-object (this output :type t :identity t)))
+  (cond ((or *print-readably* *print-escape*) (call-next-method))
         (t (format nil "Note: ~A" (note-article this)))))
 
 (defun parse-defn (section)
@@ -284,7 +281,7 @@ NOTE: First value may NIL and warned if such line does not exist."
                  (rec (cdr rest)
                       (cons
                         (progn
-                         (setf (definition-article definition)
+                         (setf (anonymous-definition-article definition)
                                  (format nil "~{~A~^ ~}" (nreverse article)))
                          definition)
                         acc))
