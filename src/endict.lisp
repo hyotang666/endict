@@ -110,12 +110,11 @@ NOTE: First value may NIL and warned if such line does not exist."
   (let ((position (search "Etym:" secondary-section)))
     (if position
         (values (make-etym :defs (loop :for content :of-type simple-string
-                                            :in (ppcre:split "Etym:"
+                                            :in (ppcre:split " *Etym: *"
                                                              secondary-section
                                                              :start position)
-                                       :for trim = (string-trim " " content)
-                                       :unless (equal "" trim)
-                                         :collect trim))
+                                       :unless (equal "" content)
+                                         :collect content))
                 (subseq secondary-section 0
                         (or (position #\Space secondary-section
                                       :from-end t
