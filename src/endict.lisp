@@ -107,7 +107,7 @@ NOTE: First value may NIL and warned if such line does not exist."
   "Return two values.
   1. An ETYM object if exists otherwise NIL.
   2. The SECONDARY-SECTION string which lacks etym part."
-  (let ((position (search "Etym:" secondary-section)))
+  (let ((position (ppcre:scan " *Etym:" secondary-section)))
     (if position
         (values (make-etym :defs (loop :for content :of-type simple-string
                                             :in (ppcre:split " *Etym: *"
@@ -115,11 +115,7 @@ NOTE: First value may NIL and warned if such line does not exist."
                                                              :start position)
                                        :unless (equal "" content)
                                          :collect content))
-                (subseq secondary-section 0
-                        (or (position #\Space secondary-section
-                                      :from-end t
-                                      :end position)
-                            position)))
+                (subseq secondary-section 0 position))
         (values nil secondary-section))))
 
 (defun discard-option (but-etym)
