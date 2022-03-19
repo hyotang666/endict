@@ -235,3 +235,82 @@ NOTE: First value may NIL and warned if such line does not exist."
           ;; I do not have enough passion to fight against such corner cases.
           (t nil))))))
 
+;;;; DEFINITION
+
+(defstruct definition (article "" :type string))
+
+(defmethod print-object ((this definition) output)
+  (cond (*print-readably* (call-next-method))
+        (*print-escape*
+         (print-unreadable-object (this output :type t :identity t)))
+        (t (format output "Defn: ~A" (definition-article this)))))
+
+(defstruct (numbering-definition (:include definition))
+  (label (error "LABEL is required.") :type (unsigned-byte 8)))
+
+(defmethod print-object ((this numbering-definition) output)
+  (cond (*print-readably* (call-next-method))
+        (*print-escape*
+         (print-unreadable-object (this output :type t :identity t)))
+        (t
+         (format output "~D. ~A" (numbering-definition-label this)
+                 (definition-article this)))))
+
+(defstruct (anonymous-definition (:include definition)))
+
+(defmethod print-object ((this anonymous-definition) output)
+  (cond (*print-readably* (call-next-method))
+        (*print-escape*
+         (print-unreadable-object (this output :type t :identity t)))
+        (t (write-string (anonymous-definition-article this) output))))
+
+(defstruct (note (:include definition)))
+
+(defmethod print-object ((this note) output)
+  (cond (*print-readably* (call-next-method))
+        (*print-escape*
+         (print-unreadable-object (this output :type t :identity t)))
+        (t (format nil "Note: ~A" (note-article this)))))
+
+(defun parse-defn (section)
+  (labels ((rec (list acc)
+             (if (endp list)
+                 (nreverse acc)
+                 (body (car list) (cdr list) acc)))
+           (body (elt rest acc)
+             (cond
+               ((uiop:string-prefix-p "Defn:" elt)
+                (definition rest (make-definition)
+                            (list (subseq elt #.(length "Defn:"))) acc))
+               ((uiop:string-prefix-p "Note:" elt)
+                (definition rest (make-note)
+                            (list (subseq elt #.(length "Note:"))) acc))
+               ((let (label position)
+                  (when (and (not (equal "" elt))
+                             (digit-char-p (char elt 0))
+                             (setf (values label position)
+                                     (parse-integer elt :junk-allowed t))
+                             (array-in-bounds-p elt position)
+                             (char= #\. (char elt position)))
+                    (definition rest (make-numbering-definition :label label)
+                                (list
+                                  (subseq elt
+                                          (or (position-if-not
+                                                (lambda (c) (find c ". ")) elt
+                                                :start position)
+                                              position)))
+                                acc))))
+               (t
+                (definition rest (make-anonymous-definition) (list elt) acc))))
+           (definition (rest definition article acc)
+             (if (or (endp rest) (equal "" (car rest)))
+                 (rec (cdr rest)
+                      (cons
+                        (progn
+                         (setf (definition-article definition)
+                                 (format nil "~{~A~^ ~}" (nreverse article)))
+                         definition)
+                        acc))
+                 (definition (cdr rest) definition (cons (car rest) article)
+                             acc))))
+    (rec section nil)))
