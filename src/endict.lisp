@@ -118,3 +118,16 @@ NOTE: First value may NIL and warned if such line does not exist."
                                          :collect trim))
                 (string-right-trim " " (subseq secondary-section 0 position)))
         (values nil secondary-section))))
+
+(defun discard-option (but-etym)
+  ;; For simplicity's sake, we discard the optional part due to its chaotic format. WTF.
+  ;; NOTE: This is designed to be used for the second value of ETYM.
+  (let* (;; To discard garbage i.e. "(),".
+         (canonicalized (ppcre:regex-replace-all "\\(\\)," but-etym ""))
+         (result
+          (string-right-trim " "
+                             (subseq canonicalized 0
+                                     (position-if (lambda (c) (find c "(["))
+                                                  canonicalized)))))
+    (assert (not (equal "" result)))
+    result))
