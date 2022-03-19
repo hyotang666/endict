@@ -186,3 +186,50 @@ NOTE: First value may NIL and warned if such line does not exist."
                      :when category
                        :return category))))))
 
+;;;; PLURAL
+
+(defstruct plural (defs (error "DEFS is required.") :type list #|of string|#))
+
+(defmethod print-object ((this plural) output)
+  (cond (*print-readably* (call-next-method))
+        (*print-escape*
+         (print-unreadable-object (this output :type t)
+           (write (car (plural-defs this)) :stream output :escape t)))
+        (t (format output "pl. ~{~A~^ ~}" (plural-defs this)))))
+
+(defstruct single (defs (error "DEFS is required.") :type list #|of string|#))
+
+(defmethod print-object ((this single) output)
+  (cond (*print-readably* (call-next-method))
+        (*print-escape*
+         (print-unreadable-object (this output :type t)
+           (write (car (single-defs this)) :stream output :escape t)))
+        (t (format output "sing. ~{~A~^ ~}" (single-defs this)))))
+
+(defun parse-pronounce-part (but-option)
+  ;; NOTE: This is designed to be used for return value of DISCARD-OPTION.
+  "Return three values.
+  1. PRONOUNCE object.
+  2. List of categories.
+  3. PLURAL, SINGLE object or NIL."
+  (destructuring-bind
+      (main . sub)
+      (delete "" (ppcre:split "; ?" but-option) :test #'equal)
+    (multiple-value-call #'values
+      (pronounce main)
+      (when sub
+        (cond
+          ((uiop:string-prefix-p "pl" (car sub))
+           (make-plural :defs (cdr (ppcre:split "\\. ?" (car sub)))))
+          ((uiop:string-prefix-p "sing." (car sub))
+           (make-single :defs (cdr (ppcre:split "\\. ?" (car sub)))))
+          ((search "pl." (car sub))
+           (make-plural :defs (cdr
+                                (ppcre:split "\\. ?"
+                                             (ppcre:regex-replace-all "pl\\."
+                                                                      (car sub)
+                                                                      "")))))
+          ;; Ignore chaotic exceptions. (70/113408 contents.)
+          ;; I do not have enough passion to fight against such corner cases.
+          (t nil))))))
+
