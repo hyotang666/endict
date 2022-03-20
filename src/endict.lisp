@@ -97,7 +97,7 @@ NOTE: First value may NIL and warned if such line does not exist."
 
 ;;;; ETYM
 
-(defstruct etym (defs (error "DEFS is required.") :type list #|of string|#))
+(defstruct etym (article (error "ARTICLE is required.") :type string))
 
 (defmethod print-object ((this etym) output)
   (cond
@@ -108,31 +108,60 @@ NOTE: First value may NIL and warned if such line does not exist."
     (*print-escape*
      (print-unreadable-object (this output :type t :identity t)))
     (t
-     (loop :for (def . rest) :on (etym-defs this)
-           :do (pprint-logical-block (output nil :prefix "Etym: ")
-                 (write-string def output)
-                 (when rest
-                   (pprint-newline :mandatory output)))))))
+     (pprint-logical-block (output nil :prefix "Etym: [" :suffix "]")
+       (write-string (etym-article this) output)))))
+
+(defstruct (categorized-etym (:include etym))
+  (category (error "CATEGORY is required.") :type string))
+
+(defmethod print-object ((this categorized-etym) output)
+  (call-next-method)
+  (unless (or *print-human-friendly* *print-readably* *print-escape*)
+    (pprint-logical-block (output nil :prefix "(" :suffix ")")
+      (write-string (categorized-etym-category this) output))))
+
+(declaim
+ (ftype (function (simple-string)
+         (values (or null simple-string) (or null simple-string) &optional))
+        parse-category))
+
+(defun parse-category (definition)
+  (multiple-value-bind (start end)
+      (ppcre:scan "\\([^\\)]+\\) *$" definition)
+    (if start
+        (values (subseq definition
+                        (if (uiop:string-prefix-p "[" definition)
+                            1
+                            0)
+                        (or (position #\] definition :end start :from-end t)
+                            start))
+                (subseq definition (1+ start)
+                        (position #\) definition :start start :end end)))
+        (values (string-trim "[]" definition) nil))))
 
 (declaim
  (ftype (function ((or null simple-string))
-         (values (or null etym) (or null simple-string) &optional))
+         (values list (or null simple-string) &optional))
         etym))
 
 (defun etym (secondary-section)
   "Return two values.
-  1. An ETYM object if exists otherwise NIL.
+  1. A List of ETYM objects.
   2. The SECONDARY-SECTION string which lacks etym part."
   (let ((position (ppcre:scan " *Etym:" secondary-section)))
     (if position
         (locally
          (declare (simple-string secondary-section))
-         (values (make-etym :defs (loop :for content :of-type simple-string
-                                             :in (ppcre:split " *Etym: *"
-                                                              secondary-section
-                                                              :start position)
-                                        :unless (equal "" content)
-                                          :collect content))
+         (values (loop :for content :of-type simple-string
+                            :in (ppcre:split " *Etym: *" secondary-section
+                                             :start position)
+                       :unless (equal "" content)
+                         :collect (multiple-value-bind (article category)
+                                      (parse-category content)
+                                    (if category
+                                        (make-categorized-etym :article article
+                                                               :category category)
+                                        (make-etym :article article))))
                  (subseq secondary-section 0 position)))
         (values nil secondary-section))))
 
@@ -352,13 +381,13 @@ NOTE: First value may NIL and warned if such line does not exist."
   (pronounce (error "PRONOUNCE is required.") :type list #|of string|#)
   (plural nil :type (or plural single null))
   (categories nil :type list #|of word-class|#)
-  (etym nil :type (or null etym))
+  (etyms nil :type list #|of etym|#)
   (definitions nil :type list))
 
 (defun parse-section (section)
   (multiple-value-bind (secondary-section rest)
       (secondary-section section)
-    (multiple-value-bind (etym but-etym)
+    (multiple-value-bind (etyms but-etym)
         (etym secondary-section)
       (multiple-value-bind (pronounce word-class plural)
           (and but-etym (parse-pronounce-part (discard-option but-etym)))
@@ -366,7 +395,7 @@ NOTE: First value may NIL and warned if such line does not exist."
                       :pronounce pronounce
                       :plural plural
                       :categories word-class
-                      :etym etym
+                      :etyms etyms
                       :definitions (parse-defn rest))))))
 
 ;;;; LOAD.
