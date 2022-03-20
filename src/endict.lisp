@@ -128,7 +128,7 @@ NOTE: First value may NIL and warned if such line does not exist."
   ;; NOTE: This is designed to be used for the second value of ETYM.
   (let* (;; To discard garbage i.e. "(),".
          (canonicalized
-          (the (array character (*))
+          (the (or (simple-array character (*)) simple-base-string)
                (ppcre:regex-replace-all "\\(\\)," but-etym "")))
          (result
           (let ((position (ppcre:scan " *[([]" canonicalized)))
@@ -324,7 +324,7 @@ NOTE: First value may NIL and warned if such line does not exist."
     (multiple-value-bind (etym but-etym)
         (etym secondary-section)
       (multiple-value-bind (pronounce category plural)
-          (pronounce but-etym)
+          (and but-etym (parse-pronounce-part (discard-option but-etym)))
         (make-section :name (name (car section))
                       :pronounce pronounce
                       :plural plural
