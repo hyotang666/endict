@@ -8,6 +8,15 @@
 
 (declaim (optimize speed))
 
+;;;; CONFIGURATION
+
+(defvar *print-human-friendly*
+  nil
+  "Control that printing notation is human friendly rather than lisp friendly.
+In other words, binds *print-readably* to NIL.
+This is used to use implementation-specific #S notation without #A notation for string.
+The printing check flow is done in order of Friendly, Readably or Escape")
+
 (defun skip-header (input)
   (loop :for line := (read-line input nil nil)
         :while line
@@ -91,15 +100,19 @@ NOTE: First value may NIL and warned if such line does not exist."
 (defstruct etym (defs (error "DEFS is required.") :type list #|of string|#))
 
 (defmethod print-object ((this etym) output)
-  (cond (*print-readably* (call-next-method))
-        (*print-escape*
-         (print-unreadable-object (this output :type t :identity t)))
-        (t
-         (loop :for (def . rest) :on (etym-defs this)
-               :do (pprint-logical-block (output nil :prefix "Etym: ")
-                     (write-string def output)
-                     (when rest
-                       (pprint-newline :mandatory output)))))))
+  (cond
+    (*print-human-friendly*
+     (let (*print-readably*)
+       (call-next-method)))
+    (*print-readably* (call-next-method))
+    (*print-escape*
+     (print-unreadable-object (this output :type t :identity t)))
+    (t
+     (loop :for (def . rest) :on (etym-defs this)
+           :do (pprint-logical-block (output nil :prefix "Etym: ")
+                 (write-string def output)
+                 (when rest
+                   (pprint-newline :mandatory output)))))))
 
 (declaim
  (ftype (function ((or null simple-string))
@@ -185,20 +198,28 @@ NOTE: First value may NIL and warned if such line does not exist."
 (defstruct plural (defs (error "DEFS is required.") :type list #|of string|#))
 
 (defmethod print-object ((this plural) output)
-  (cond (*print-readably* (call-next-method))
-        (*print-escape*
-         (print-unreadable-object (this output :type t)
-           (write (car (plural-defs this)) :stream output :escape t)))
-        (t (funcall (formatter "pl. ~{~A~^ ~}") output (plural-defs this)))))
+  (cond
+    (*print-human-friendly*
+     (let (*print-readably*)
+       (call-next-method)))
+    (*print-readably* (call-next-method))
+    (*print-escape*
+     (print-unreadable-object (this output :type t)
+       (write (car (plural-defs this)) :stream output :escape t)))
+    (t (funcall (formatter "pl. ~{~A~^ ~}") output (plural-defs this)))))
 
 (defstruct single (defs (error "DEFS is required.") :type list #|of string|#))
 
 (defmethod print-object ((this single) output)
-  (cond (*print-readably* (call-next-method))
-        (*print-escape*
-         (print-unreadable-object (this output :type t)
-           (write (car (single-defs this)) :stream output :escape t)))
-        (t (funcall (formatter "sing. ~{~A~^ ~}") output (single-defs this)))))
+  (cond
+    (*print-human-friendly*
+     (let (*print-readably*)
+       (call-next-method)))
+    (*print-readably* (call-next-method))
+    (*print-escape*
+     (print-unreadable-object (this output :type t)
+       (write (car (single-defs this)) :stream output :escape t)))
+    (t (funcall (formatter "sing. ~{~A~^ ~}") output (single-defs this)))))
 
 (defun parse-pronounce-part (but-option)
   ;; NOTE: This is designed to be used for return value of DISCARD-OPTION.
@@ -232,34 +253,41 @@ NOTE: First value may NIL and warned if such line does not exist."
 (defstruct anonymous-definition (article "" :type string))
 
 (defmethod print-object ((this anonymous-definition) output)
-  (cond ;; To use implementation #S() notation without the string print as #A style.
-        (*print-readably*
-         (let (*print-readably*)
-           (call-next-method)))
-        (*print-escape*
-         (print-unreadable-object (this output :type t :identity t)))
-        (t (write-string (anonymous-definition-article this) output))))
+  (cond
+    (*print-human-friendly*
+     (let (*print-readably*)
+       (call-next-method)))
+    (*print-readably* (call-next-method))
+    (*print-escape*
+     (print-unreadable-object (this output :type t :identity t)))
+    (t (write-string (anonymous-definition-article this) output))))
 
 (defstruct (definition (:include anonymous-definition)))
 
 (defmethod print-object ((this definition) output)
-  (cond ((or *print-readably* *print-escape*) (call-next-method))
-        (t (funcall (formatter "Defn: ~A") output (definition-article this)))))
+  (cond
+    ((or *print-human-friendly* *print-readably* *print-escape*)
+     (call-next-method))
+    (t (funcall (formatter "Defn: ~A") output (definition-article this)))))
 
 (defstruct (numbering-definition (:include anonymous-definition))
   (label (error "LABEL is required.") :type (unsigned-byte 8)))
 
 (defmethod print-object ((this numbering-definition) output)
-  (cond ((or *print-readably* *print-escape*) (call-next-method))
-        (t
-         (funcall (formatter "~D. ~A") output (numbering-definition-label this)
-                  (numbering-definition-article this)))))
+  (cond
+    ((or *print-human-friendly* *print-readably* *print-escape*)
+     (call-next-method))
+    (t
+     (funcall (formatter "~D. ~A") output (numbering-definition-label this)
+              (numbering-definition-article this)))))
 
 (defstruct (note (:include anonymous-definition)))
 
 (defmethod print-object ((this note) output)
-  (cond ((or *print-readably* *print-escape*) (call-next-method))
-        (t (funcall (formatter "Note: ~A") output (note-article this)))))
+  (cond
+    ((or *print-human-friendly* *print-readably* *print-escape*)
+     (call-next-method))
+    (t (funcall (formatter "Note: ~A") output (note-article this)))))
 
 (defun parse-defn (section)
   (labels ((rec (list acc)
