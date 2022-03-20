@@ -259,7 +259,7 @@ NOTE: First value may NIL and warned if such line does not exist."
 
 (defmethod print-object ((this note) output)
   (cond ((or *print-readably* *print-escape*) (call-next-method))
-        (t (format nil "Note: ~A" (note-article this)))))
+        (t (funcall (formatter "Note: ~A") output (note-article this)))))
 
 (defun parse-defn (section)
   (labels ((rec (list acc)
