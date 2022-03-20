@@ -30,33 +30,36 @@
        acc
        (ignore '("M." "P." "X.")))
       ((null line) (values (cons name (nreverse acc)) nil))
-    (declare (type (simple-array character (*)) line name))
-    (if acc
-        (unless (member line ignore :test #'equal)
-          (if (and ;; The name must have one alphabet at least.
-                   (find-if #'upper-case-p line)
-                   (every
-                     (lambda (c) (or (upper-case-p c) (not (alphanumericp c))))
-                     line)
-                   ;; The name never have bracket nor paren.
-                   (not (find-if (lambda (char) (find char "[]()")) line))
-                   ;; The name never start with "&".
-                   (not (uiop:string-prefix-p "&" line))
-                   ;; The name never have "..".
-                   (not (search ".." line))
-                   ;; Next name must start with same alphabet or next alphabet of the NAME.
-                   (or (string= line name :end1 1 :end2 1)
-                       (char= (char line 0)
-                              (code-char (1+ (char-code (char name 0))))))
-                   ;; The name line must below empty line.
-                   (equal "" (car acc)))
-              (return (values (cons name (nreverse acc)) line))
-              (push line acc)))
-        (if (and (not (equal "" line))
-                 (every (lambda (c) (or (upper-case-p c) (char= #\Space c)))
-                        line))
-            (setq name (format nil "~A ~A" name line))
-            (push line acc)))))
+    (locally ; Without locally, the declaration scope includes end form and
+             ; update form above.
+     (declare (type (simple-array character (*)) line name))
+     (if acc
+         (unless (member line ignore :test #'equal)
+           (if (and ;; The name must have one alphabet at least.
+                    (find-if #'upper-case-p line)
+                    (every
+                      (lambda (c)
+                        (or (upper-case-p c) (not (alphanumericp c))))
+                      line)
+                    ;; The name never have bracket nor paren.
+                    (not (find-if (lambda (char) (find char "[]()")) line))
+                    ;; The name never start with "&".
+                    (not (uiop:string-prefix-p "&" line))
+                    ;; The name never have "..".
+                    (not (search ".." line))
+                    ;; Next name must start with same alphabet or next alphabet of the NAME.
+                    (or (string= line name :end1 1 :end2 1)
+                        (char= (char line 0)
+                               (code-char (1+ (char-code (char name 0))))))
+                    ;; The name line must below empty line.
+                    (equal "" (car acc)))
+               (return (values (cons name (nreverse acc)) line))
+               (push line acc)))
+         (if (and (not (equal "" line))
+                  (every (lambda (c) (or (upper-case-p c) (char= #\Space c)))
+                         line))
+             (setq name (format nil "~A ~A" name line))
+             (push line acc))))))
 
 ;;;; NAME
 
@@ -99,8 +102,8 @@ NOTE: First value may NIL and warned if such line does not exist."
                        (pprint-newline :mandatory output)))))))
 
 (declaim
- (ftype (function (simple-string)
-         (values (or null etym) simple-string &optional))
+ (ftype (function ((or null simple-string))
+         (values (or null etym) (or null simple-string) &optional))
         etym))
 
 (defun etym (secondary-section)
@@ -109,13 +112,15 @@ NOTE: First value may NIL and warned if such line does not exist."
   2. The SECONDARY-SECTION string which lacks etym part."
   (let ((position (ppcre:scan " *Etym:" secondary-section)))
     (if position
-        (values (make-etym :defs (loop :for content :of-type simple-string
-                                            :in (ppcre:split " *Etym: *"
-                                                             secondary-section
-                                                             :start position)
-                                       :unless (equal "" content)
-                                         :collect content))
-                (subseq secondary-section 0 position))
+        (locally
+         (declare (simple-string secondary-section))
+         (values (make-etym :defs (loop :for content :of-type simple-string
+                                             :in (ppcre:split " *Etym: *"
+                                                              secondary-section
+                                                              :start position)
+                                        :unless (equal "" content)
+                                          :collect content))
+                 (subseq secondary-section 0 position)))
         (values nil secondary-section))))
 
 (defun discard-option (but-etym)
