@@ -79,7 +79,7 @@ The printing check flow is done in order of Friendly, Readably or Escape")
 
 (defun secondary-section (section)
   "Accept SECTION. Return two values.
-  1. A line which should have pronouce, category and Etym.
+  1. A line which should have pronouce, word-class and Etym.
   2. The SECTION which lacks secondary section part.
 NOTE: First value may NIL and warned if such line does not exist."
   (loop :for (content . rest) :of-type (simple-string . list) :on (cdr section)
@@ -151,24 +151,31 @@ NOTE: First value may NIL and warned if such line does not exist."
     (assert (not (equal "" result)))
     result))
 
+(deftype word-class ()
+  '(member :noun
+           :plural :single
+           :article :verb
+           :adverb :obs
+           :interjection :preposition
+           :conjunction :past-participle))
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   ;; To muffle compiler claims as 'undefined variable:'.
-  (unless (boundp '+category+)
-    (defconstant +category+
+  (unless (boundp '+word-class+)
+    (defconstant +word-class+
       '(("n." . :noun) ("n.." . :noun) ("n. pl." . :plural) ("n.pl." . :plural)
         ("pl." . :plural) ("n. sing." . :single) ("n.sing." . :single)
         ("a." . :article) ("a" . :article) ("v. t." . :verb) ("v.t." . :verb)
         ("v.t" . :verb) ("v. i." . :varb) ("v.i." . :varb) ("v." . :verb)
         ("adv." . :adverb) ("i." . :verb) ("obs." . :obs)
         ("interj." . :interjection) ("prep." . :preposition)
-        ("conj." . :conjunction) ("p. p." . :past-participle)
-        ("obs." . :obs)))))
+        ("conj." . :conjunction) ("p. p." . :past-participle)))))
 
-(defun parse-category (string)
+(defun parse-word-class (string)
   (loop :for token :in (ppcre:split " ?& ?" string)
-        :for category = (cdr (assoc token +category+ :test #'equal))
-        :when category
-          :collect category))
+        :for word-class = (cdr (assoc token +word-class+ :test #'equal))
+        :when word-class
+          :collect word-class))
 
 ;;;; PRONOUNCE
 
@@ -184,14 +191,14 @@ NOTE: First value may NIL and warned if such line does not exist."
        (destructuring-bind
            (first second)
            split
-         (values (list first) (parse-category second))))
-      ;; For simplicity's sake, we use only first pronounce and last category.
+         (values (list first) (parse-word-class second))))
+      ;; For simplicity's sake, we use only first pronounce and last word-class.
       (otherwise
        (values (list (car split))
                (loop :for elt :in (reverse (cdr split))
-                     :for category := (parse-category elt)
-                     :when category
-                       :return category))))))
+                     :for word-class := (parse-word-class elt)
+                     :when word-class
+                       :return word-class))))))
 
 ;;;; PLURAL
 
@@ -344,7 +351,7 @@ NOTE: First value may NIL and warned if such line does not exist."
   (name (error "NAME is required.") :type list #|of string|#)
   (pronounce (error "PRONOUNCE is required.") :type list #|of string|#)
   (plural nil :type (or plural single null))
-  (categories nil :type list #|of category|#)
+  (categories nil :type list #|of word-class|#)
   (etym nil :type (or null etym))
   (definitions nil :type list))
 
@@ -353,12 +360,12 @@ NOTE: First value may NIL and warned if such line does not exist."
       (secondary-section section)
     (multiple-value-bind (etym but-etym)
         (etym secondary-section)
-      (multiple-value-bind (pronounce category plural)
+      (multiple-value-bind (pronounce word-class plural)
           (and but-etym (parse-pronounce-part (discard-option but-etym)))
         (make-section :name (name (car section))
                       :pronounce pronounce
                       :plural plural
-                      :categories category
+                      :categories word-class
                       :etym etym
                       :definitions (parse-defn rest))))))
 
