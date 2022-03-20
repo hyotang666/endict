@@ -274,11 +274,19 @@ NOTE: First value may NIL and warned if such line does not exist."
           ((uiop:string-prefix-p "sing." (car sub))
            (make-single :defs (cdr (ppcre:split "\\. ?" (car sub)))))
           ((search "pl." (the simple-string (car sub)))
-           (make-plural :defs (cdr
-                                (ppcre:split "\\. ?"
-                                             (ppcre:regex-replace-all "pl\\."
-                                                                      (car sub)
-                                                                      "")))))
+           (make-plural :defs (loop :for sub :of-type simple-string
+                                         :in (uiop:split-string (car sub)
+                                                                :separator ",")
+                                    :collect (let ((start
+                                                    (nth-value 1
+                                                               (ppcre:scan
+                                                                 "pl. ?" sub))))
+                                               (if start
+                                                   (subseq sub start
+                                                           (position #\. sub
+                                                                     :start start))
+                                                   (string-right-trim "."
+                                                                      sub))))))
           ;; Ignore chaotic exceptions. (70/113408 contents.)
           ;; I do not have enough passion to fight against such corner cases.
           (t nil))))))
