@@ -380,6 +380,7 @@ NOTE: First value may NIL and warned if such line does not exist."
   (name (error "NAME is required.") :type list #|of string|#)
   (pronounce (error "PRONOUNCE is required.") :type list #|of string|#)
   (suffix nil :type list #|of string|#)
+  (syllable nil :type list #|of (unsigned-byte 4)|#)
   (plural nil :type (or plural single null))
   (categories nil :type list #|of word-class|#)
   (etyms nil :type list #|of etym|#)
@@ -401,6 +402,15 @@ NOTE: First value may NIL and warned if such line does not exist."
                    (position-if #'vowelp temp :from-end t))
                   0)))))
 
+(defun syllable (pronounce)
+  (let ((count 0))
+    (declare (type (unsigned-byte 4) count)
+             #+sbcl ; out of our responsibility.
+             (sb-ext:muffle-conditions sb-ext:compiler-note))
+    (ppcre:do-matches (#:start #:end "[êaôà&üeùáiöjïoûuëæéy]+" pronounce)
+      (incf count))
+    count))
+
 (defun parse-section (section)
   (multiple-value-bind (secondary-section rest)
       (secondary-section section)
@@ -411,6 +421,8 @@ NOTE: First value may NIL and warned if such line does not exist."
         (make-section :name (name (car section))
                       :pronounce pronounce
                       :suffix (mapcar #'suffix pronounce)
+                      :syllable (loop :for p :in pronounce
+                                      :collect (ignore-errors (syllable p)))
                       :plural plural
                       :categories word-class
                       :etyms etyms
