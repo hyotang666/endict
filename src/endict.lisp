@@ -72,8 +72,7 @@ The printing check flow is done in order of Friendly, Readably or Escape")
 
 ;;;; NAME
 
-(defun name (name)
-  (delete "" (the list (uiop:split-string name :separator "; ")) :test #'equal))
+(defun name (name) (delete "" (the list (ppcre:split "; " name)) :test #'equal))
 
 ;;;; SECONDARY-SECTION
 
