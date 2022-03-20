@@ -98,6 +98,11 @@ NOTE: First value may NIL and warned if such line does not exist."
 
 (defstruct etym (article (error "ARTICLE is required.") :type string))
 
+(defun pprint-article (output article &rest noise)
+  (declare (ignore noise))
+  (funcall (formatter "~<~@{~A~^ ~:_~}~:>") output
+           (uiop:split-string article :separator " ")))
+
 (defmethod print-object ((this etym) output)
   (cond
     (*print-human-friendly*
@@ -108,7 +113,7 @@ NOTE: First value may NIL and warned if such line does not exist."
      (print-unreadable-object (this output :type t :identity t)))
     (t
      (pprint-logical-block (output nil :prefix "Etym: [" :suffix "]")
-       (write-string (etym-article this) output)))))
+       (pprint-article output (etym-article this))))))
 
 (defstruct (categorized-etym (:include etym))
   (category (error "CATEGORY is required.") :type string))
@@ -117,7 +122,7 @@ NOTE: First value may NIL and warned if such line does not exist."
   (call-next-method)
   (unless (or *print-human-friendly* *print-readably* *print-escape*)
     (pprint-logical-block (output nil :prefix "(" :suffix ")")
-      (write-string (categorized-etym-category this) output))))
+      (pprint-article output (categorized-etym-category this)))))
 
 (declaim
  (ftype (function (simple-string)
@@ -294,11 +299,6 @@ NOTE: First value may NIL and warned if such line does not exist."
 ;;;; DEFINITION
 
 (defstruct anonymous-definition (article "" :type string))
-
-(defun pprint-article (output article &rest noise)
-  (declare (ignore noise))
-  (funcall (formatter "~<~@{~A~^ ~:_~}~:>") output
-           (uiop:split-string article :separator " ")))
 
 (defmethod print-object ((this anonymous-definition) output)
   (cond
