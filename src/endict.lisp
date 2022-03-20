@@ -379,10 +379,27 @@ NOTE: First value may NIL and warned if such line does not exist."
 (defstruct section
   (name (error "NAME is required.") :type list #|of string|#)
   (pronounce (error "PRONOUNCE is required.") :type list #|of string|#)
+  (suffix nil :type list #|of string|#)
   (plural nil :type (or plural single null))
   (categories nil :type list #|of word-class|#)
   (etyms nil :type list #|of etym|#)
   (definitions nil :type list))
+
+(defun vowelp (char) (find char "êaôà&üeùáiöjïoûuëæéy"))
+
+(defun suffix (pronounce)
+  (when pronounce
+    (let ((temp
+           (ppcre:regex-replace "(\"|`|'|\\.|:|-|\"\")? ?( n|}|v. t|v.t)?\\.?$"
+                                (string-downcase pronounce) "")))
+      (declare (type (simple-array character (*)) temp))
+      (subseq temp
+              (or (locally
+                   ;; Due to upgraded array element type not known at compile time.
+                   #+sbcl
+                   (declare (sb-ext:muffle-conditions sb-ext:compiler-note))
+                   (position-if #'vowelp temp :from-end t))
+                  0)))))
 
 (defun parse-section (section)
   (multiple-value-bind (secondary-section rest)
@@ -393,6 +410,7 @@ NOTE: First value may NIL and warned if such line does not exist."
           (and but-etym (parse-pronounce-part (discard-option but-etym)))
         (make-section :name (name (car section))
                       :pronounce pronounce
+                      :suffix (mapcar #'suffix pronounce)
                       :plural plural
                       :categories word-class
                       :etyms etyms
