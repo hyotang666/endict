@@ -16,7 +16,7 @@ I want both human and machine readable well-formatted (Yes, it is S-Expression.)
 - [x] Convert plain text dictionary to lisp objects.
 - [ ] Provide S-Expression dictionary.
 - [ ] Extend to support syllables.
-- [ ] Extend to support suffix.
+- [x] Extend to support suffix.
 - [ ] Provide sqlite3 file.
 
 ### License
