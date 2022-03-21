@@ -421,7 +421,13 @@ NOTE: First value may NIL and warned if such line does not exist."
          (funcall (formatter "~{~A~:@_~}~:@_") output etyms)
          (funcall (formatter "~{~A~^~:@_~:@_~}") output definitions))))))
 
-(defun vowelp (char) (find char "êaôà&üeùáiöjïoûuëæéy"))
+(defun last-vowels (pronounce)
+  #+sbcl ; Out of our responsibility.
+  (declare (sb-ext:muffle-conditions sb-ext:compiler-note))
+  (let (last)
+    (ppcre:do-matches (start #:end "[êaôà&üeùáiöjïoûuëæéy]+" pronounce)
+      (setq last start))
+    last))
 
 (defun canonicalize-pronounce (pronounce)
   (ppcre:regex-replace "(\"|`|'|\\.|:|-|\"\")? ?( n|}|v. t|v.t)?\\.?$"
@@ -431,13 +437,7 @@ NOTE: First value may NIL and warned if such line does not exist."
   (when pronounce
     (let ((temp (canonicalize-pronounce pronounce)))
       (declare (type (simple-array character (*)) temp))
-      (subseq temp
-              (or (locally
-                   ;; Due to upgraded array element type not known at compile time.
-                   #+sbcl
-                   (declare (sb-ext:muffle-conditions sb-ext:compiler-note))
-                   (position-if #'vowelp temp :from-end t))
-                  0)))))
+      (subseq temp (or (last-vowels temp) 0)))))
 
 (defun syllable (pronounce)
   (let ((count 1))
