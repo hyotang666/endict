@@ -435,13 +435,26 @@ NOTE: First value may NIL and warned if such line does not exist."
 
 (defun suffix (pronounce)
   (when pronounce
-    (let* ((canon (canonicalize-pronounce pronounce))
-           (temp
-            (if (ppcre:scan "\\wte" canon)
-                (string-right-trim "e" canon)
-                canon)))
-      (declare (type (simple-array character (*)) temp canon))
-      (subseq canon (or (last-vowels temp) 0)))))
+    (flet ((canonicalize-for-suffix (pronounce)
+             (cond ;; for "paste" -> "aste", not "e".
+                   ((ppcre:scan "\\w[s|c|t|r|v]e$" pronounce)
+                    (string-right-trim "e" pronounce))
+                   ;; for "abandoned" -> "oned", not "ed".
+                   ((let ((start (ppcre:scan "ed$" pronounce)))
+                      ;; for "abbreviated" -> "ed", not "ated".
+                      (when start
+                        (locally
+                         (declare (type (unsigned-byte 6) start))
+                         (not
+                           (find (char pronounce (1- start)) "\"`rdplbt")))))
+                    (ppcre:regex-replace "ed$" pronounce ""))
+                   (t pronounce))))
+      (declare
+        (ftype (function (simple-string) (values simple-string &optional))
+               canonicalize-for-suffix))
+      (let* ((canon (canonicalize-pronounce pronounce))
+             (temp (canonicalize-for-suffix canon)))
+        (subseq canon (or (last-vowels temp) 0))))))
 
 (defun syllable (pronounce)
   (let ((count 1))
