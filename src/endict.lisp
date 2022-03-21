@@ -435,9 +435,13 @@ NOTE: First value may NIL and warned if such line does not exist."
 
 (defun suffix (pronounce)
   (when pronounce
-    (let ((temp (canonicalize-pronounce pronounce)))
-      (declare (type (simple-array character (*)) temp))
-      (subseq temp (or (last-vowels temp) 0)))))
+    (let* ((canon (canonicalize-pronounce pronounce))
+           (temp
+            (if (ppcre:scan "\\wte" canon)
+                (string-right-trim "e" canon)
+                canon)))
+      (declare (type (simple-array character (*)) temp canon))
+      (subseq canon (or (last-vowels temp) 0)))))
 
 (defun syllable (pronounce)
   (let ((count 1))
