@@ -423,11 +423,13 @@ NOTE: First value may NIL and warned if such line does not exist."
 
 (defun vowelp (char) (find char "êaôà&üeùáiöjïoûuëæéy"))
 
+(defun canonicalize-pronounce (pronounce)
+  (ppcre:regex-replace "(\"|`|'|\\.|:|-|\"\")? ?( n|}|v. t|v.t)?\\.?$"
+                       (string-downcase pronounce) ""))
+
 (defun suffix (pronounce)
   (when pronounce
-    (let ((temp
-           (ppcre:regex-replace "(\"|`|'|\\.|:|-|\"\")? ?( n|}|v. t|v.t)?\\.?$"
-                                (string-downcase pronounce) "")))
+    (let ((temp (canonicalize-pronounce pronounce)))
       (declare (type (simple-array character (*)) temp))
       (subseq temp
               (or (locally
@@ -438,11 +440,12 @@ NOTE: First value may NIL and warned if such line does not exist."
                   0)))))
 
 (defun syllable (pronounce)
-  (let ((count 0))
+  (let ((count 1))
     (declare (type (unsigned-byte 4) count)
              #+sbcl ; out of our responsibility.
              (sb-ext:muffle-conditions sb-ext:compiler-note))
-    (ppcre:do-matches (#:start #:end "[êaôà&üeùáiöjïoûuëæéy]+" pronounce)
+    (ppcre:do-matches (#:start #:end ; Instead of ignore declaration.
+                       "[^\\w']+" (canonicalize-pronounce pronounce))
       (incf count))
     count))
 
