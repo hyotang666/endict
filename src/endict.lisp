@@ -391,9 +391,9 @@ NOTE: First value may NIL and warned if such line does not exist."
              body))
     (rec section nil)))
 
-;;;; SECTION
+;;;; WORD
 
-(defstruct section
+(defstruct word
   (name (error "NAME is required.") :type list #|of string|#)
   (pronounce (error "PRONOUNCE is required.") :type list #|of string|#)
   (suffix nil :type list #|of string|#)
@@ -403,7 +403,7 @@ NOTE: First value may NIL and warned if such line does not exist."
   (etyms nil :type list #|of etym|#)
   (definitions nil :type list))
 
-(defmethod print-object ((this section) output)
+(defmethod print-object ((this word) output)
   (cond
     (*print-human-friendly*
      (let (*print-readably*)
@@ -473,15 +473,15 @@ NOTE: First value may NIL and warned if such line does not exist."
         (etym secondary-section)
       (multiple-value-bind (pronounce word-class plural)
           (and but-etym (parse-pronounce-part (discard-option but-etym)))
-        (make-section :name (name (car section))
-                      :pronounce pronounce
-                      :suffix (mapcar #'suffix pronounce)
-                      :syllable (loop :for p :in pronounce
-                                      :collect (ignore-errors (syllable p)))
-                      :plural plural
-                      :categories word-class
-                      :etyms etyms
-                      :definitions (parse-defn rest))))))
+        (make-word :name (name (car section))
+                   :pronounce pronounce
+                   :suffix (mapcar #'suffix pronounce)
+                   :syllable (loop :for p :in pronounce
+                                   :collect (ignore-errors (syllable p)))
+                   :plural plural
+                   :categories word-class
+                   :etyms etyms
+                   :definitions (parse-defn rest))))))
 
 ;;;; LOAD.
 
