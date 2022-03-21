@@ -215,7 +215,7 @@ NOTE: First value may NIL and warned if such line does not exist."
 (defun pronounce (pronounce-part)
   "Return two values.
   1. List of pronounces.
-  2. List of categories."
+  2. List of word-classes."
   (let ((split (ppcre:split ", ?" pronounce-part)))
     (case (list-length split)
       (0 (values nil nil))
@@ -265,7 +265,7 @@ NOTE: First value may NIL and warned if such line does not exist."
   ;; NOTE: This is designed to be used for return value of DISCARD-OPTION.
   "Return three values.
   1. PRONOUNCE object.
-  2. List of categories.
+  2. List of word-classes.
   3. PLURAL, SINGLE object or NIL."
   (destructuring-bind
       (main . sub)
@@ -399,7 +399,7 @@ NOTE: First value may NIL and warned if such line does not exist."
   (suffix nil :type list #|of string|#)
   (syllable nil :type list #|of (unsigned-byte 4)|#)
   (plural nil :type (or plural single null))
-  (categories nil :type list #|of word-class|#)
+  (classes nil :type list #|of word-class|#)
   (etyms nil :type list #|of etym|#)
   (definitions nil :type list))
 
@@ -410,14 +410,14 @@ NOTE: First value may NIL and warned if such line does not exist."
        (call-next-method)))
     ((or *print-readably* *print-escape*) (call-next-method))
     (t
-     (with-slots (name pronounce plural categories etyms definitions)
+     (with-slots (name pronounce plural classes etyms definitions)
          this
        (pprint-logical-block (output nil)
          (pprint-newline :mandatory output)
          (funcall (formatter "~{~A~^; ~}~:@_") output name)
          (funcall (formatter "~{~A~^; ~}~:@_") output pronounce)
          (funcall (formatter "~@[~A~:@_~]") output plural)
-         (funcall (formatter "~@[~{~S~^ ~}~:@_~]") output categories)
+         (funcall (formatter "~@[~{~S~^ ~}~:@_~]") output classes)
          (funcall (formatter "~{~A~:@_~}~:@_") output etyms)
          (funcall (formatter "~{~A~^~:@_~:@_~}") output definitions))))))
 
@@ -471,7 +471,7 @@ NOTE: First value may NIL and warned if such line does not exist."
       (secondary-section section)
     (multiple-value-bind (etyms but-etym)
         (etym secondary-section)
-      (multiple-value-bind (pronounce word-class plural)
+      (multiple-value-bind (pronounce word-classes plural)
           (and but-etym (parse-pronounce-part (discard-option but-etym)))
         (make-word :name (name (car section))
                    :pronounce pronounce
@@ -479,7 +479,7 @@ NOTE: First value may NIL and warned if such line does not exist."
                    :syllable (loop :for p :in pronounce
                                    :collect (ignore-errors (syllable p)))
                    :plural plural
-                   :categories word-class
+                   :classes word-classes
                    :etyms etyms
                    :definitions (parse-defn rest))))))
 
