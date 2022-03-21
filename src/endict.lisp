@@ -94,9 +94,15 @@ NOTE: First value may NIL and warned if such line does not exist."
                                     (car section))
                               rest)))))
 
+;;;; INTERFACES
+
+(defgeneric article (obj))
+
 ;;;; ETYM
 
 (defstruct etym (article (error "ARTICLE is required.") :type string))
+
+(defmethod article ((this etym)) (etym-article this))
 
 (defun pprint-article (output article &rest noise)
   (declare (ignore noise))
@@ -299,6 +305,9 @@ NOTE: First value may NIL and warned if such line does not exist."
 ;;;; DEFINITION
 
 (defstruct anonymous-definition (article "" :type string))
+
+(defmethod article ((this anonymous-definition))
+  (anonymous-definition-article this))
 
 (defmethod print-object ((this anonymous-definition) output)
   (cond
