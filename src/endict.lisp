@@ -2,7 +2,42 @@
 
 (defpackage :endict
   (:use :cl)
-  (:export))
+  (:export ;;;; CONFIGURATION
+           #:*print-human-friendly*
+           ;;;; MAIN API
+           #:load-dictionary.txt
+           ;;;; INTERFACES
+           #:article ; for etym and defintion.
+           ;;;; OBJECTS
+           ;;;; WORD
+           #:word ; type name.
+           ;; readers.
+           #:word-name
+           #:word-pronounce
+           #:word-suffix
+           #:word-syllable
+           #:word-plural
+           #:word-classes
+           #:word-etyms
+           #:word-definitions
+           ;;;; PLURAL
+           #:plural
+           #:single
+           #:plural-defs
+           #:single-defs
+           ;;;; ETYM
+           #:etym ; type name.
+           #:categorized-etym ; type name.
+           ;; reader.
+           #:etym-article
+           #:categorized-etym-category
+           ;;;; DEFINITION
+           #:anonymous-definition
+           #:definition
+           #:numbering-definition
+           #:note
+           ;; reader
+           #:numbering-definition-label))
 
 (in-package :endict)
 
