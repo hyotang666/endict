@@ -153,8 +153,9 @@ NOTE: First value may NIL and warned if such line does not exist."
     (*print-escape*
      (print-unreadable-object (this output :type t :identity t)))
     (t
-     (pprint-logical-block (output nil :prefix "Etym: [" :suffix "]")
-       (pprint-article output (etym-article this))))))
+     (let ((*print-pretty* t))
+       (pprint-logical-block (output nil :prefix "Etym: [" :suffix "]")
+         (pprint-article output (etym-article this)))))))
 
 (defstruct (categorized-etym (:include etym))
   (category (error "CATEGORY is required.") :type string))
@@ -162,8 +163,9 @@ NOTE: First value may NIL and warned if such line does not exist."
 (defmethod print-object ((this categorized-etym) output)
   (call-next-method)
   (unless (or *print-human-friendly* *print-readably* *print-escape*)
-    (pprint-logical-block (output nil :prefix "(" :suffix ")")
-      (pprint-article output (categorized-etym-category this)))))
+    (let ((*print-pretty* t))
+      (pprint-logical-block (output nil :prefix "(" :suffix ")")
+        (pprint-article output (categorized-etym-category this))))))
 
 (declaim
  (ftype (function (simple-string)
@@ -361,8 +363,9 @@ NOTE: First value may NIL and warned if such line does not exist."
     ((or *print-human-friendly* *print-readably* *print-escape*)
      (call-next-method))
     (t
-     (funcall (formatter "Defn: ~/endict:pprint-article/") output
-              (definition-article this)))))
+     (let ((*print-pretty* t))
+       (funcall (formatter "Defn: ~/endict:pprint-article/") output
+                (definition-article this))))))
 
 (defstruct (numbering-definition (:include anonymous-definition))
   (label (error "LABEL is required.") :type (unsigned-byte 8)))
@@ -372,9 +375,10 @@ NOTE: First value may NIL and warned if such line does not exist."
     ((or *print-human-friendly* *print-readably* *print-escape*)
      (call-next-method))
     (t
-     (funcall (formatter "~D. ~/endict:pprint-article/") output
-              (numbering-definition-label this)
-              (numbering-definition-article this)))))
+     (let ((*print-pretty* t))
+       (funcall (formatter "~D. ~/endict:pprint-article/") output
+                (numbering-definition-label this)
+                (numbering-definition-article this))))))
 
 (defstruct (note (:include anonymous-definition)))
 
@@ -383,8 +387,9 @@ NOTE: First value may NIL and warned if such line does not exist."
     ((or *print-human-friendly* *print-readably* *print-escape*)
      (call-next-method))
     (t
-     (funcall (formatter "Note: ~/endict:pprint-article/") output
-              (note-article this)))))
+     (let ((*print-pretty* t))
+       (funcall (formatter "Note: ~/endict:pprint-article/") output
+                (note-article this))))))
 
 (defun parse-defn (section)
   (labels ((rec (list acc)
@@ -454,16 +459,17 @@ NOTE: First value may NIL and warned if such line does not exist."
        (call-next-method)))
     ((or *print-readably* *print-escape*) (call-next-method))
     (t
-     (with-slots (name pronounce plural classes etyms definitions)
-         this
-       (pprint-logical-block (output nil)
-         (pprint-newline :mandatory output)
-         (funcall (formatter "~{~A~^; ~}~:@_") output name)
-         (funcall (formatter "~{~A~^; ~}~:@_") output pronounce)
-         (funcall (formatter "~@[~A~:@_~]") output plural)
-         (funcall (formatter "~@[~{~S~^ ~}~:@_~]") output classes)
-         (funcall (formatter "~{~A~:@_~}~:@_") output etyms)
-         (funcall (formatter "~{~A~^~:@_~:@_~}") output definitions))))))
+     (let ((*print-pretty* t))
+       (with-slots (name pronounce plural classes etyms definitions)
+           this
+         (pprint-logical-block (output nil)
+           (pprint-newline :mandatory output)
+           (funcall (formatter "~{~A~^; ~}~:@_") output name)
+           (funcall (formatter "~{~A~^; ~}~:@_") output pronounce)
+           (funcall (formatter "~@[~A~:@_~]") output plural)
+           (funcall (formatter "~@[~{~S~^ ~}~:@_~]") output classes)
+           (funcall (formatter "~{~A~:@_~}~:@_") output etyms)
+           (funcall (formatter "~{~A~^~:@_~:@_~}") output definitions)))))))
 
 (defun last-vowels (pronounce)
   #+sbcl ; Out of our responsibility.
