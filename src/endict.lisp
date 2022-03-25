@@ -141,8 +141,16 @@ NOTE: First value may NIL and warned if such line does not exist."
 
 (defun pprint-article (output article &rest noise)
   (declare (ignore noise))
-  (funcall (formatter "~<~@{~A~^ ~:_~}~:>") output
-           (uiop:split-string article :separator " ")))
+  (pprint-logical-block (output nil)
+    (loop :for (line . rest) :of-type (simple-string . list) :on article
+          :if (search "  " line)
+            :do (write-line line output)
+          :else
+            :do (funcall (formatter "~{~A~^ ~:_~}") output
+                         (uiop:split-string line :separator " "))
+                (when rest
+                  (write-char #\Space output)
+                  (pprint-newline :fill output)))))
 
 (defmethod print-object ((this etym) output)
   (cond
@@ -152,20 +160,22 @@ NOTE: First value may NIL and warned if such line does not exist."
     (*print-readably* (call-next-method))
     (*print-escape*
      (print-unreadable-object (this output :type t :identity t)))
-    (t
-     (let ((*print-pretty* t))
-       (pprint-logical-block (output nil :prefix "Etym: [" :suffix "]")
-         (pprint-article output (etym-article this)))))))
+    (*print-pretty*
+     (pprint-logical-block (output nil :prefix "Etym: [" :suffix "]")
+       (pprint-article output (list (etym-article this)))))
+    (t (funcall (formatter "Etym: [~A]") output (etym-article this)))))
 
 (defstruct (categorized-etym (:include etym))
   (category (error "CATEGORY is required.") :type string))
 
 (defmethod print-object ((this categorized-etym) output)
   (call-next-method)
-  (unless (or *print-human-friendly* *print-readably* *print-escape*)
-    (let ((*print-pretty* t))
-      (pprint-logical-block (output nil :prefix "(" :suffix ")")
-        (pprint-article output (categorized-etym-category this))))))
+  (cond ((or *print-human-friendly* *print-readably* *print-escape*))
+        (*print-pretty*
+         (pprint-logical-block (output nil :prefix "(" :suffix ")")
+           (pprint-article output (list (categorized-etym-category this)))))
+        (t
+         (funcall (formatter "(~A)") output (categorized-etym-category this)))))
 
 (declaim
  (ftype (function (simple-string)
@@ -341,7 +351,7 @@ NOTE: First value may NIL and warned if such line does not exist."
 
 ;;;; DEFINITION
 
-(defstruct anonymous-definition (article "" :type string))
+(defstruct anonymous-definition (article nil :type list #|of string|#))
 
 (defmethod article ((this anonymous-definition))
   (anonymous-definition-article this))
@@ -354,7 +364,11 @@ NOTE: First value may NIL and warned if such line does not exist."
     (*print-readably* (call-next-method))
     (*print-escape*
      (print-unreadable-object (this output :type t :identity t)))
-    (t (pprint-article output (anonymous-definition-article this)))))
+    (*print-pretty*
+     (pprint-article output (anonymous-definition-article this)))
+    (t
+     (funcall (formatter "~{~A~^~%~}") output
+              (anonymous-definition-article this)))))
 
 (defstruct (definition (:include anonymous-definition)))
 
@@ -362,10 +376,12 @@ NOTE: First value may NIL and warned if such line does not exist."
   (cond
     ((or *print-human-friendly* *print-readably* *print-escape*)
      (call-next-method))
+    (*print-pretty*
+     (funcall (formatter "Defn: ~/endict:pprint-article/") output
+              (definition-article this)))
     (t
-     (let ((*print-pretty* t))
-       (funcall (formatter "Defn: ~/endict:pprint-article/") output
-                (definition-article this))))))
+     (funcall (formatter "Defn: ~{~A~^~%~}") output
+              (definition-article this)))))
 
 (defstruct (numbering-definition (:include anonymous-definition))
   (label (error "LABEL is required.") :type (unsigned-byte 8)))
@@ -374,11 +390,14 @@ NOTE: First value may NIL and warned if such line does not exist."
   (cond
     ((or *print-human-friendly* *print-readably* *print-escape*)
      (call-next-method))
+    (*print-pretty*
+     (funcall (formatter "~D. ~/endict:pprint-article/") output
+              (numbering-definition-label this)
+              (numbering-definition-article this)))
     (t
-     (let ((*print-pretty* t))
-       (funcall (formatter "~D. ~/endict:pprint-article/") output
-                (numbering-definition-label this)
-                (numbering-definition-article this))))))
+     (funcall (formatter "~D. ~{~A~^~%~}") output
+              (numbering-definition-label this)
+              (numbering-definition-article this)))))
 
 (defstruct (note (:include anonymous-definition)))
 
@@ -386,10 +405,10 @@ NOTE: First value may NIL and warned if such line does not exist."
   (cond
     ((or *print-human-friendly* *print-readably* *print-escape*)
      (call-next-method))
-    (t
-     (let ((*print-pretty* t))
-       (funcall (formatter "Note: ~/endict:pprint-article/") output
-                (note-article this))))))
+    (*print-pretty*
+     (funcall (formatter "Note: ~/endict:pprint-article/") output
+              (note-article this)))
+    (t (funcall (formatter "Note: ~{~A~^~%~}") output (note-article this)))))
 
 (defun parse-defn (section)
   (labels ((rec (list acc)
@@ -429,7 +448,7 @@ NOTE: First value may NIL and warned if such line does not exist."
                       (cons
                         (progn
                          (setf (anonymous-definition-article definition)
-                                 (format nil "~{~A~^ ~}" (nreverse article)))
+                                 (nreverse article))
                          definition)
                         acc))
                  (definition (cdr rest) definition (cons (car rest) article)
@@ -458,18 +477,28 @@ NOTE: First value may NIL and warned if such line does not exist."
      (let (*print-readably*)
        (call-next-method)))
     ((or *print-readably* *print-escape*) (call-next-method))
+    (*print-pretty*
+     (with-slots (name pronounce plural classes etyms definitions)
+         this
+       (pprint-logical-block (output nil)
+         (pprint-newline :mandatory output)
+         (funcall (formatter "~{~A~^; ~} ~:@_") output name)
+         (funcall (formatter "~{~A~^; ~} ~:@_") output pronounce)
+         (funcall (formatter "~@[~A ~:@_~]") output plural)
+         (funcall (formatter "~@[~{~S~^ ~} ~:@_~]") output classes)
+         (funcall (formatter "~{~A~:@_~} ~:@_") output etyms)
+         (funcall (formatter "~{~A~^ ~:@_~:@_~}") output definitions))))
     (t
-     (let ((*print-pretty* t))
-       (with-slots (name pronounce plural classes etyms definitions)
-           this
-         (pprint-logical-block (output nil)
-           (pprint-newline :mandatory output)
-           (funcall (formatter "~{~A~^; ~}~:@_") output name)
-           (funcall (formatter "~{~A~^; ~}~:@_") output pronounce)
-           (funcall (formatter "~@[~A~:@_~]") output plural)
-           (funcall (formatter "~@[~{~S~^ ~}~:@_~]") output classes)
-           (funcall (formatter "~{~A~:@_~}~:@_") output etyms)
-           (funcall (formatter "~{~A~^~:@_~:@_~}") output definitions)))))))
+     (with-slots (name pronounce plural classes etyms definitions)
+         this
+       (pprint-logical-block (output nil)
+         (pprint-newline :mandatory output)
+         (funcall (formatter "~{~A~^; ~} ~%") output name)
+         (funcall (formatter "~{~A~^; ~} ~%") output pronounce)
+         (funcall (formatter "~@[~A ~%~]") output plural)
+         (funcall (formatter "~@[~{~S~^ ~} ~%~]") output classes)
+         (funcall (formatter "~{~A~:@_~} ~%") output etyms)
+         (funcall (formatter "~{~A~^ ~2%~}") output definitions))))))
 
 (defun last-vowels (pronounce)
   #+sbcl ; Out of our responsibility.
