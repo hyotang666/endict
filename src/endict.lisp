@@ -497,7 +497,7 @@ NOTE: First value may NIL and warned if such line does not exist."
          (funcall (formatter "~{~A~^; ~} ~%") output pronounce)
          (funcall (formatter "~@[~A ~%~]") output plural)
          (funcall (formatter "~@[~{~S~^ ~} ~%~]") output classes)
-         (funcall (formatter "~{~A~:@_~} ~%") output etyms)
+         (funcall (formatter "~{~A~%~} ~%") output etyms)
          (funcall (formatter "~{~A~^ ~2%~}") output definitions))))))
 
 (defun last-vowels (pronounce)
