@@ -516,7 +516,7 @@ NOTE: First value may NIL and warned if such line does not exist."
   (when pronounce
     (flet ((canonicalize-for-suffix (pronounce)
              (cond ;; for "paste" -> "aste", not "e".
-                   ((ppcre:scan "\\w[s|c|t|r|v]e$" pronounce)
+                   ((ppcre:scan "\\w[s|c|t|r|v|m]e$" pronounce)
                     (string-right-trim "e" pronounce))
                    ;; for "abandoned" -> "oned", not "ed".
                    ((let ((start (ppcre:scan "ed$" pronounce)))
