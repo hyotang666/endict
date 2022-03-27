@@ -411,53 +411,50 @@ NOTE: First value may NIL and warned if such line does not exist."
     (t (funcall (formatter "Note: ~{~A~^~%~}") output (note-article this)))))
 
 (defun parse-defn (section)
-  (labels ((rec (list acc)
-             (if (endp list)
-                 (nreverse acc)
-                 (body (car list) (cdr list) acc)))
-           (but-prefix (prefix-regex string)
-             (ppcre:regex-replace prefix-regex string ""))
-           (body (elt rest acc)
-             (cond
-               ((uiop:string-prefix-p "Defn:" elt)
-                (definition rest (make-definition)
-                            (list (but-prefix "Defn: *" elt)) acc))
-               ((uiop:string-prefix-p "Note:" elt)
-                (definition rest (make-note) (list (but-prefix "Note: *" elt))
-                            acc))
-               ((let (label position)
-                  (when (and (not (equal "" elt))
-                             (digit-char-p (char elt 0))
-                             (setf (values label position)
-                                     (parse-integer elt :junk-allowed t))
-                             (array-in-bounds-p elt position)
-                             (char= #\. (char elt position)))
-                    (definition rest (make-numbering-definition :label label)
-                                (list
-                                  (subseq elt
-                                          (or (position-if-not
-                                                (lambda (c) (find c ". ")) elt
-                                                :start position)
-                                              position)))
-                                acc))))
-               (t
-                (definition rest (make-anonymous-definition) (list elt) acc))))
-           (definition (rest definition article acc)
-             (if (or (endp rest) (equal "" (car rest)))
-                 (rec (cdr rest)
-                      (cons
-                        (progn
-                         (setf (anonymous-definition-article definition)
-                                 (nreverse article))
-                         definition)
-                        acc))
-                 (definition (cdr rest) definition (cons (car rest) article)
-                             acc))))
+  (labels ((collect-definitions (list)
+             (loop :with args := list
+                   :with object
+                   :while args
+                   :do (setf (values object args)
+                               (multiple-value-call #'set-article
+                                 (next-object (car args))
+                                 (cdr args)))
+                   :collect object))
+           (next-object (line)
+             (let (label position) ; used only in third clause.
+               (cond
+                 ((uiop:string-prefix-p "Defn:" line)
+                  (values (make-definition)
+                          (list (ppcre:regex-replace "Defn: *" line ""))))
+                 ((uiop:string-prefix-p "Note:" line)
+                  (values (make-note)
+                          (list (ppcre:regex-replace "Note: *" line ""))))
+                 ((and (not (equal "" line))
+                       (digit-char-p (char line 0))
+                       (setf (values label position)
+                               (parse-integer line :junk-allowed t))
+                       (array-in-bounds-p line position)
+                       (char= #\. (char line position)))
+                  (values (make-numbering-definition :label label)
+                          (list
+                            (subseq line
+                                    (or (position-if-not
+                                          (lambda (c) (find c ". ")) line
+                                          :start position)
+                                        position)))))
+                 (t (values (make-anonymous-definition) (list line))))))
+           (set-article (definition article list)
+             (loop :for (line . rest) :on list
+                   :until (equal "" line)
+                   :do (push line article)
+                   :finally (setf (anonymous-definition-article definition)
+                                    (nreverse article))
+                            (return (values definition rest)))))
     (declare
-      (ftype (function ((simple-array character (*)) list list)
-              (values list &optional))
-             body))
-    (rec section nil)))
+      (ftype (function ((simple-array character (*)))
+              (values anonymous-definition list &optional))
+             next-object))
+    (collect-definitions section)))
 
 ;;;; WORD
 
